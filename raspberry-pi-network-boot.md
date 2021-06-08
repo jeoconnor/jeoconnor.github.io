@@ -1,18 +1,44 @@
 # raspberry-pi-network-boot
 How to boot a raspberry pi over a network.
 
-Using my Dell desktop for the server running LinuxMint 19.3.
+To do this involves setting up an install server subnet from a
+separate host computer.  In this case I'm using my desktop running
+LinuxMint 19.3.
 
 ## Server configuration
-Need separate network to serve DHCP request with tftp support which I'm not sure how to do if I just allow my local ASUS router to serve out the IP addresses.  While setting up the DHCP and TFTP servers on my desktop it was convenient to have a full Raspian installed sd card so that I could test that they were working.
+On the server we'll need to set up both a DHCP and a TFTP server to
+handle network requests on the subnet.
+
+In establishing that the DHCP server is working correctly I used a
+standard Raspian install to see the DHCP server as a first step prior
+to involving the TFTP server.
+### Setup subnet
+
+My home router subnet is 192.168.1.0/24 so I'm choosing
+192.168.10.0/24 for the install subnet.  For the subnet network I'm
+using a USB ethernet adapter which shows up on my system as:
+```
+5: enx681ca2130a63: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+    link/ether 68:1c:a2:13:0a:63 brd ff:ff:ff:ff:ff:ff
+```
+Configure `enx681ca2130a63` to have a static IP of 192.168.10.1 and a netmask 255.255.255.0.
 
 ### Install DHCP server 
 ```
-# apt-get install isc-dhcp-server
+$ sudo apt install isc-dhcp-server
+```
+First add the following content to `/etc/dhcp/dhcpd.conf`.
+
+In LinuxMint the ethernet adapter that the dhcp server will use is defined in `/etc/default/isc-dhcp-server`.  Add or edit the folling lines for the ethernet interface listed above:
+```
+INTERFACESv4="enx681ca2130a63"
+INTERFACESv6="enx681ca2130a63"
 ```
 
-Configuration: `/etc/dhcp/dhcpd.conf`
+If you want a static IP aasigned to the RPi uncomment out the two lines below.
+
 ```
+$ cat /etc/dhcp/dhcpd.conf
 max-lease-time 86400;
 
 authoritative;
@@ -27,36 +53,51 @@ subnet 192.168.10.0 netmask 255.255.255.0 {
   option routers 192.168.10.1;
 
   host raspberry {
-    hardware ethernet b8:27:eb:b1:14:9b;
-    fixed-address 192.168.10.100;
+#    hardware ethernet b8:27:eb:b1:14:9b;
+#    fixed-address 192.168.10.100;
     next-server 192.168.10.1;
     option tftp-server-name "192.168.10.1";
   }
 
 }
 ```
-This fixes the served IP address to remain fixed over time, but it isn't necessary.  The `next-server` option specifies the TFTP server.
+The `next-server` option specifies the TFTP server.
+
+Boot/reboot the raspberry pi and check that `eth0` is now configured
+on the `192.168.10.0/24` subnet. Eg.,
+```
+pi@raspberrypi:~$ ip addr show dev eth0
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether b8:27:eb:b1:14:9b brd ff:ff:ff:ff:ff:ff
+    inet 192.168.10.117/24 brd 192.168.10.255 scope global dynamic noprefixroute eth0
+       valid_lft 403sec preferred_lft 328sec
+    inet6 fe80::79ba:f7db:a398:84af/64 scope link 
+       valid_lft forever preferred_lft forever
+```
 
 ### Install TFTP server
 ```
-# apt-get install atftpd
+$ sudo apt install atftpd
 ```
-In `the configuration file: `/etc/default/atftpd` set the two options:
+In the configuration file: `/etc/default/atftpd` set the two options:
 ```
 USE_INETD=false
 OPTIONS="/tftpboot"
 ```
 Create the directory `/tftpboot` and make it world writable and owned by `nobody`.
 ```
-# chown nobody /tftpboot
-# chmod 777 /tftpboot
+$ sudo mkdir /tftpboot
+$ sudo chown nobody /tftpboot
+$ sudo chmod 777 /tftpboot
 ```
 
 Since we're not using `inetd` or one of its clones, start the `atfptd` server with the command,
 ```
-# /etc/init.d/atftpd start
+$ sudo /etc/init.d/atftpd start
 ```
-Populate the `/tftpboot` directory with the files, `bootcode.bin`, `fixup.dat` and `start.elf` which can be taken from the `/boot` partition of a Raspbian` SD card install. 
+Populate the `/tftpboot` directory with the files, `bootcode.bin`,
+`fixup.dat` and `start.elf` which can be taken from the `/boot`
+partition of a Raspbian` SD card install.
 ### Serial Port Console
 
 Add the entry, `enable_uart=1` to the file `/boot/config.txt` on an SD card set up to boot a pi.
@@ -77,9 +118,10 @@ For using minicom on the host to connect to the serial port the configuration se
     |    Change which setting?                                              |
     +-----------------------------------------------------------------------+   
 ```
-Note the hardware and software flow control settings.  These are reversed from the minicom defaults.
 
-To enable network booting in the raspberry pi, boot
+Note the hardware and software flow control settings.  These are
+reversed from the minicom defaults.
+
 
 ### Enable network boot
 In the /boot/config.txt file of a full Raspbian install add the entry,
@@ -129,4 +171,4 @@ Jun 25 13:00:36 maxwell atftpd[2287]: Serving kernel.img to 192.168.10.100:49168
 Jun 25 13:00:36 maxwell atftpd[2287]: Serving armstub8.bin to 192.168.10.100:49169
 Jun 25 13:00:36 maxwell atftpd[2287]: Serving kernel8.img to 192.168.10.100:49170
 ```
-
+Looks good.
