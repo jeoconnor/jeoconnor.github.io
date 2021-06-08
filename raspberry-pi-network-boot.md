@@ -137,7 +137,8 @@ The `3020000a` is what to expect.
 
 Now remove the SD card from the Raspberry PI and powercycle the Raspberry PI.
 `/var/log/syslog` will show tftp messages: 
-```Jun 25 13:00:32 maxwell dhcpd[2048]: DHCPDISCOVER from b8:27:eb:b1:14:9b via enp4s0
+```
+Jun 25 13:00:32 maxwell dhcpd[2048]: DHCPDISCOVER from b8:27:eb:b1:14:9b via enp4s0
 Jun 25 13:00:32 maxwell dhcpd[2048]: DHCPOFFER on 192.168.10.100 to b8:27:eb:b1:14:9b via enp4s0
 Jun 25 13:00:34 maxwell atftpd[2287]: Serving bootcode.bin to 192.168.10.100:49152
 Jun 25 13:00:34 maxwell ntpd[2796]: Listen normally on 61 enp4s0 192.168.10.1:123
@@ -171,4 +172,5 @@ Jun 25 13:00:36 maxwell atftpd[2287]: Serving kernel.img to 192.168.10.100:49168
 Jun 25 13:00:36 maxwell atftpd[2287]: Serving armstub8.bin to 192.168.10.100:49169
 Jun 25 13:00:36 maxwell atftpd[2287]: Serving kernel8.img to 192.168.10.100:49170
 ```
+
 Looks good.
