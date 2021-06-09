@@ -20,4 +20,9 @@ src/gz raspberrypi3 http://192.168.1.138:8000/raspberrypi3
 ```
 using the correct IP address for the host where the http server is running.
 
-
+Confirm that it's working:
+```
+# opkg list | wc -l
+6055
+```
+Prior to adding `base-feeds.conf` and starting the http server on the host, the same query came up empty.
